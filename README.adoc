@@ -120,7 +120,10 @@ The Vert.x ecosystem consists of a host of modules. The following ones are alrea
 * vertx-circuit-breaker-scala
 
 Including these in your build only requires adding the usual sbt-dependency-line:
+
+----
 "io.vertx" %% "vertx-web-scala" % 3.4.0
+----
 
 The following paragraphs will show examples for using some of these for your projects.
 === vertx-web-scala
