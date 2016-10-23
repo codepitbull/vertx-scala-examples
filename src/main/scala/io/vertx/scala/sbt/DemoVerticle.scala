@@ -9,5 +9,7 @@ class DemoVerticle extends ScalaVerticle {
       .createHttpServer()
       .requestHandler(_.response().end("Hello World"))
       .listen(8666)
+
+    vertx.eventBus().consumer("hallo", a => println(a.body())).completionFuture()
   }
 }

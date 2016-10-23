@@ -1,0 +1,127 @@
+= Vert.x Scala Examples
+Jochen Mader <jochen.mader@codecentric.de>
+v1.0, 2014-01-01
+:toc:
+
+== Introduction
+blablabla
+
+== Quickstart
+To get started simply make a copy of https://github.com/codepitbull/vertx-scala-sbt[vertx-scala-sbt]
+and you're good to go.
+It contains a fully working demo-project including the capability to create a runnable fat-jar. All
+examples in this introduction are based on that project.
+
+== Running it
+Switch to your newly created project and run `sbt`. In the shell type `console`to switch to the Scala
+console. it already has all the necessary imports to start playing around.
+
+Let's deploy the DemoVerticle first.
+
+[source,scala]
+----
+sbt // <1>
+> console // <2>
+scala> vertx.deploymentIDs // <3>
+res0: Set[String] = Set()
+scala> vertx.deployVerticle(s"scala:${classOf[DemoVerticle].getName}") // <4>
+scala> vertx.deploymentIDs  // <5>
+res2: Set[String] = Set(e1420fbe-e5e5-4240-8f1c-eaf64f4a79ed)
+----
+<1> Launch sbt
+<2> switch to scala-console (all necessary imports are already provided)
+<3> check what is currently deployed (nothing as we just started sbt)
+<4> deploy the included DemoVerticle
+<5> check that the verticle has been deployed
+
+You can now got to http://127.0.0.1:8666/[http://127.0.0.1:8666/] to receive
+your first "Hello World" from Vert.x-Scala.
+Now lets get rid of the deployed verticle
+
+[source,scala]
+----
+vertx.undeploy(res2.head)
+----
+And just to be sure the *clean-slate*-variant.
+[source,scala]
+----
+vertx.deploymentIDs.foreach(vertx.undeploy)
+----
+
+== Using futures
+There are many differences between the Scala and Java-versions of the Vert.x-API. The
+ Biggest one is definitely the bandling async operations.
+Instead of the combination of http://vertx.io/docs/apidocs/io/vertx/core/AsyncResult.html[AsyncResult] and Vert.x-specific
+http://vertx.io/docs/apidocs/io/vertx/core/Future.html[Future] the Scala-Version relies on Scala-native-combination of
+ http://www.scala-lang.org/api/2.11.8/index.html#scala.concurrent.Promise[Promise] and
+ http://www.scala-lang.org/api/2.11.8/index.html#scala.concurrent.Future[Future].
+
+Each async-method in the Vert.x-API now provides a method with the suffix *Future*. Here a few examples:
+- vertx.deployVerticle => vertx.deployVerticleFuture
+- vertx.undeploy => vertx.undeployFuture
+- vertx.eventBus.send => vertx.eventBus.sendFuture
+The same is true for methods that are part of the fluent-API e.g. *vertx.eventBus().consumer(...).completionFuture()*.
+
+Let's redo the example from the last chapter but this time we are going to wait for the verticle-deployment to finish.
+Copy the following code snipped into your sbt-shell.
+[source,scala]
+----
+vertx.deployVerticleFuture(s"scala:${classOf[DemoVerticle].getName}").andThen{
+     case Success(deploymentId) => println(deploymentId)
+     case Failure(t) => t.printStackTrace
+}
+----
+The *deployVerticleFuture*-method returns a Scala-Future. Using *andThen* we then pattern match on the result.
+The next variant uses the future the register a onSuccess-callback (just a reminder: clear your deployments first!):
+[source,scala]
+----
+val future = vertx.deployVerticleFuture(s"scala:${classOf[DemoVerticle].getName}")
+future.onSuccess{case deploymnetId => println(deploymnetId)}
+----
+Another nice thing is the ability to use for-comprehension for multiple futures. The following piece of code will
+deploy the verticle and then register a consumer on the eventbus. Both operations are async and produce a Future.
+[source,scala]
+----
+val future1 = vertx.deployVerticleFuture(s"scala:${classOf[DemoVerticle].getName}")
+val future2 = vertx.eventBus().consumer[String]("hallo", a => println(a.body())).completionFuture()
+
+val res = for {
+  r1 <- future1
+  r2 <- future2
+} yield (println(s"r1 r2"))
+----
+
+== Vert.x modules
+The Vert.x ecosystem consists of a host of modules. The following ones are already supported by the Scala-API:
+
+* vertx-sql-common-scala
+* vertx-bridge-common-scala
+* vertx-jdbc-client-scala
+* vertx-mongo-client-scala
+* vertx-mongo-service-scala
+* vertx-auth-common-scala
+* vertx-auth-shiro-scala
+* vertx-auth-oauth2-scala
+* vertx-auth-mongo-scala
+* vertx-auth-jwt-scala
+* vertx-auth-jdbc-scala
+* vertx-web-scala
+* vertx-mysql-postgresql-client-scala
+* vertx-mail-client-scala
+* vertx-rabbitmq-client-scala
+* vertx-redis-client-scala
+* vertx-stomp-scala
+* vertx-tcp-eventbus-bridge-scala
+* vertx-amqp-bridge-scala
+* vertx-dropwizard-metrics-scala
+* vertx-hawkular-metrics-scala
+* vertx-shell-scala
+* vertx-service-discovery-scala
+* vertx-circuit-breaker-scala
+
+Including these in your build only requires adding the usual sbt-dependency-line:
+"io.vertx" %% "vertx-web-scala" % 3.4.0
+
+The following paragraphs will show examples for using some of these for your projects.
+=== vertx-web-scala
+
